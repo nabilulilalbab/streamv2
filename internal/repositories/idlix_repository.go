@@ -55,16 +55,26 @@ func (r *IDLIXRepository) GetFeaturedMovies() ([]models.Movie, error) {
 		url, urlExists := s.Find("a").Attr("href")
 		title := strings.TrimSpace(s.Find("h3").Text())
 		poster, _ := s.Find("img").Attr("src")
-		year := strings.TrimSpace(s.Find("span.year").Text())
-		movieType := strings.TrimSpace(s.Find("span.type").Text())
+		
+		// Extract year from span (first span element)
+		year := strings.TrimSpace(s.Find("span").First().Text())
+		
+		// Extract type from URL path
+		// URL format: https://tv12.idlixku.com/{type}/{slug}/
+		// Split and get index 3 (0: https:, 1: empty, 2: tv12.idlixku.com, 3: type)
+		urlParts := strings.Split(url, "/")
+		movieType := ""
+		if len(urlParts) > 3 {
+			movieType = urlParts[3]
+		}
 
 		// Validate required fields
 		if !urlExists || url == "" || title == "" {
 			return // Skip invalid entries
 		}
 
-		// Filter out TV series (only movies)
-		if strings.ToLower(movieType) == "tv" || strings.Contains(strings.ToLower(title), "season") {
+		// Filter out TV series (only movies) - match Python logic
+		if movieType == "tvseries" {
 			return
 		}
 
