@@ -143,6 +143,8 @@ func (r *IDLIXRepository) GetVideoData(movieURL string) (videoID, videoName, pos
 
 // GetEmbedURL gets and decrypts the embed URL
 func (r *IDLIXRepository) GetEmbedURL(videoID string) (string, error) {
+	fmt.Printf("\n🔐 [IDLIX_REPO] GetEmbedURL called with videoID: %s\n", videoID)
+	
 	if videoID == "" {
 		return "", fmt.Errorf("video ID is required")
 	}
@@ -161,71 +163,105 @@ func (r *IDLIXRepository) GetEmbedURL(videoID string) (string, error) {
 		"Origin":       strings.TrimSuffix(r.client.GetBaseURL(), "/"),
 	}
 
+	requestURL := r.client.GetBaseURL() + "wp-admin/admin-ajax.php"
+	fmt.Printf("📤 [IDLIX_REPO] POST Request to: %s\n", requestURL)
+	fmt.Printf("📤 [IDLIX_REPO] Form Data: %s\n", formData.Encode())
+
 	// POST request
-	resp, err := r.client.Post(
-		r.client.GetBaseURL()+"wp-admin/admin-ajax.php",
-		headers,
-		formData.Encode(),
-	)
+	resp, err := r.client.Post(requestURL, headers, formData.Encode())
 	if err != nil {
+		fmt.Printf("❌ [IDLIX_REPO] POST request failed: %v\n", err)
 		return "", fmt.Errorf("failed to fetch embed URL: %w", err)
 	}
 	defer resp.Body.Close()
 
+	fmt.Printf("📥 [IDLIX_REPO] Response Status Code: %d\n", resp.StatusCode)
+
 	// Check status
 	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("❌ [IDLIX_REPO] Non-200 status: %d, Body: %s\n", resp.StatusCode, string(body))
 		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	// Parse response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Printf("❌ [IDLIX_REPO] Failed to read response: %v\n", err)
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
+	bodyPreview := string(body)
+	if len(body) > 300 {
+		bodyPreview = bodyPreview[:300]
+	}
+	fmt.Printf("📥 [IDLIX_REPO] Response Body (first 300 chars): %s\n", bodyPreview)
+
 	var embedResponse models.EncryptedEmbed
 	if err := json.Unmarshal(body, &embedResponse); err != nil {
+		fmt.Printf("❌ [IDLIX_REPO] Failed to parse JSON: %v\n", err)
 		return "", fmt.Errorf("failed to parse embed response: %w", err)
 	}
 
 	// Validate response
 	if embedResponse.EmbedURL == "" {
+		fmt.Printf("❌ [IDLIX_REPO] EmbedURL is empty in response\n")
 		return "", fmt.Errorf("embed URL not found in response")
 	}
+
+	embedPreview := embedResponse.EmbedURL
+	if len(embedResponse.EmbedURL) > 100 {
+		embedPreview = embedResponse.EmbedURL[:100]
+	}
+	fmt.Printf("🔐 [IDLIX_REPO] Encrypted embed_url: %s\n", embedPreview)
+	fmt.Printf("🔑 [IDLIX_REPO] Key: %s\n", embedResponse.Key)
 
 	// Parse the embed_url JSON string to get encrypted data
 	var encryptedData models.EncryptedData
 	if err := json.Unmarshal([]byte(embedResponse.EmbedURL), &encryptedData); err != nil {
+		fmt.Printf("❌ [IDLIX_REPO] Failed to parse encrypted data: %v\n", err)
 		return "", fmt.Errorf("failed to parse encrypted embed data: %w", err)
 	}
 
 	// Validate encrypted data
 	if encryptedData.M == "" {
+		fmt.Printf("❌ [IDLIX_REPO] M parameter is empty\n")
 		return "", fmt.Errorf("M parameter not found in encrypted data")
 	}
+
+	fmt.Printf("🔐 [IDLIX_REPO] Encrypted M parameter: %s\n", encryptedData.M)
 
 	// Generate passphrase using dec()
 	passphrase, err := utils.Dec(embedResponse.Key, encryptedData.M)
 	if err != nil {
+		fmt.Printf("❌ [IDLIX_REPO] Failed to generate passphrase: %v\n", err)
 		return "", fmt.Errorf("failed to generate passphrase: %w", err)
 	}
+
+	fmt.Printf("🔑 [IDLIX_REPO] Generated passphrase: %s\n", passphrase)
 
 	// Decrypt embed URL
 	decryptedJSON, err := utils.CryptoJSDecrypt(embedResponse.EmbedURL, passphrase)
 	if err != nil {
+		fmt.Printf("❌ [IDLIX_REPO] Decryption failed: %v\n", err)
 		return "", fmt.Errorf("failed to decrypt embed URL: %w", err)
 	}
+
+	fmt.Printf("✅ [IDLIX_REPO] Decrypted result: %s\n", decryptedJSON)
 
 	// Parse decrypted JSON to extract actual URL
 	// The decrypted result is a JSON string containing the actual embed URL
 	var embedURLData interface{}
 	if err := json.Unmarshal([]byte(decryptedJSON), &embedURLData); err != nil {
 		// If it's not JSON, return as-is (might be plain string)
-		return strings.Trim(decryptedJSON, "\""), nil
+		result := strings.Trim(decryptedJSON, "\"")
+		fmt.Printf("✅ [IDLIX_REPO] Final embed URL (plain): %s\n", result)
+		return result, nil
 	}
 
 	// If it's a string, return it
 	if urlStr, ok := embedURLData.(string); ok {
+		fmt.Printf("✅ [IDLIX_REPO] Final embed URL (string): %s\n", urlStr)
 		return urlStr, nil
 	}
 
@@ -233,10 +269,19 @@ func (r *IDLIXRepository) GetEmbedURL(videoID string) (string, error) {
 	if embedMap, ok := embedURLData.(map[string]interface{}); ok {
 		if url, exists := embedMap["embed_url"]; exists {
 			if urlStr, ok := url.(string); ok {
+				fmt.Printf("✅ [IDLIX_REPO] Final embed URL (object): %s\n", urlStr)
 				return urlStr, nil
 			}
 		}
 	}
 
+	fmt.Printf("✅ [IDLIX_REPO] Final embed URL (raw): %s\n", decryptedJSON)
 	return decryptedJSON, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

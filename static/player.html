@@ -308,6 +308,12 @@
             });
         }
 
+        // Get proxy URL to bypass CORS
+        function getProxyURL(targetURL) {
+            const encodedURL = encodeURIComponent(targetURL);
+            return `/api/v1/proxy?url=${encodedURL}`;
+        }
+
         // Fetch video info from API
         async function fetchVideoInfo() {
             const movieUrl = document.getElementById('movieUrl').value.trim();
@@ -336,8 +342,10 @@
                     displayVideoInfo(data.data);
                     
                     if (data.data.m3u8_url) {
-                        document.getElementById('m3u8Url').value = data.data.m3u8_url;
-                        playM3U8(data.data.m3u8_url);
+                        // Use proxy URL to bypass CORS
+                        const proxyURL = getProxyURL(data.data.m3u8_url);
+                        document.getElementById('m3u8Url').value = proxyURL;
+                        playM3U8(proxyURL);
                     }
 
                     if (data.data.variants && data.data.variants.length > 0) {
@@ -357,11 +365,16 @@
 
         // Play direct M3U8
         function playDirect() {
-            const m3u8Url = document.getElementById('m3u8Url').value.trim();
+            let m3u8Url = document.getElementById('m3u8Url').value.trim();
             
             if (!m3u8Url) {
                 showError('Please enter M3U8 URL');
                 return;
+            }
+
+            // If URL doesn't start with /api/v1/proxy, proxy it
+            if (!m3u8Url.startsWith('/api/v1/proxy')) {
+                m3u8Url = getProxyURL(m3u8Url);
             }
 
             playM3U8(m3u8Url);
@@ -441,7 +454,8 @@
 
             variants.forEach((variant, index) => {
                 const option = document.createElement('option');
-                option.value = variant.uri;
+                // Proxy the variant URI to bypass CORS
+                option.value = getProxyURL(variant.uri);
                 option.textContent = `${variant.resolution || 'Unknown'} (${Math.round(variant.bandwidth / 1000)} kbps)`;
                 selector.appendChild(option);
             });
@@ -454,12 +468,13 @@
             const qualityUrl = document.getElementById('quality').value;
             
             if (qualityUrl) {
+                // URL is already proxied from displayQualityOptions
                 playM3U8(qualityUrl);
                 showSuccess('Quality changed!');
             } else {
-                // Adaptive (use master playlist)
+                // Adaptive (use master playlist with proxy)
                 if (currentVideoData && currentVideoData.m3u8_url) {
-                    playM3U8(currentVideoData.m3u8_url);
+                    playM3U8(getProxyURL(currentVideoData.m3u8_url));
                     showSuccess('Switched to adaptive quality');
                 }
             }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"idlix-api/internal/models"
@@ -45,9 +46,12 @@ func (h *VideoHandler) GetVideoInfo(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("\n🎯 [HANDLER] Received video info request for URL: %s\n", req.URL)
+
 	// Get video info
 	videoInfo, err := h.service.GetVideoInfo(req.URL)
 	if err != nil {
+		fmt.Printf("❌ [HANDLER] Service returned error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(
 			"Failed to get video info",
 			"VIDEO_INFO_ERROR",
@@ -55,6 +59,8 @@ func (h *VideoHandler) GetVideoInfo(c *gin.Context) {
 		))
 		return
 	}
+
+	fmt.Printf("✅ [HANDLER] Successfully retrieved video info\n")
 
 	// Return success response
 	c.JSON(http.StatusOK, models.SuccessResponse(

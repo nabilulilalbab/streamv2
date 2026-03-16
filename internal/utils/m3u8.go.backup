@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 
 	"idlix-api/internal/models"
@@ -23,51 +22,13 @@ func NewM3U8Parser(client *HTTPClient) *M3U8Parser {
 	}
 }
 
-// ConvertMP4ToM3U8 converts any video URL to M3U8 URL by replacing the file extension
-// This function replaces ANY file extension (.mp4, .txt, .avi, etc.) with .m3u8
-// to match the behavior of the Python implementation.
-// It properly handles URLs with query parameters and fragments.
-func ConvertMP4ToM3U8(videoURL string) string {
-	// Handle empty string
-	if videoURL == "" {
-		return ""
+// ConvertMP4ToM3U8 converts MP4 URL to M3U8 URL
+func ConvertMP4ToM3U8(mp4URL string) string {
+	// Replace .mp4 extension with .m3u8
+	if strings.HasSuffix(mp4URL, ".mp4") {
+		return strings.TrimSuffix(mp4URL, ".mp4") + ".m3u8"
 	}
-	
-	// Separate URL from query parameters and fragments
-	// Query parameters start with '?', fragments with '#'
-	queryIndex := strings.Index(videoURL, "?")
-	fragmentIndex := strings.Index(videoURL, "#")
-	
-	// Determine where the actual URL ends
-	urlEnd := len(videoURL)
-	queryParams := ""
-	
-	// Extract query parameters if present
-	if queryIndex != -1 {
-		urlEnd = queryIndex
-		queryParams = videoURL[queryIndex:]
-	} else if fragmentIndex != -1 {
-		urlEnd = fragmentIndex
-		queryParams = videoURL[fragmentIndex:]
-	}
-	
-	// Work with the base URL (without query params/fragments)
-	baseURL := videoURL[:urlEnd]
-	
-	// Find the last dot in the base URL to locate the file extension
-	lastDot := strings.LastIndex(baseURL, ".")
-	
-	// Find the last slash to ensure we're only looking at the filename part
-	lastSlash := strings.LastIndex(baseURL, "/")
-	
-	// If there's no dot, or the dot comes before the last slash (meaning it's in the path, not the filename),
-	// just append .m3u8
-	if lastDot == -1 || (lastSlash != -1 && lastDot < lastSlash) {
-		return baseURL + ".m3u8" + queryParams
-	}
-	
-	// Replace the extension with .m3u8 and re-append query params
-	return baseURL[:lastDot] + ".m3u8" + queryParams
+	return mp4URL
 }
 
 // ParseMasterPlaylist parses M3U8 master playlist and extracts variants
@@ -125,18 +86,14 @@ func (p *M3U8Parser) ParseMasterPlaylist(m3u8URL string) ([]models.VariantPlayli
 
 			// Make URI absolute if it's relative
 			if !strings.HasPrefix(variant.URI, "http") {
-				// Parse the m3u8URL to extract base URL
-				baseURL, err := url.Parse(m3u8URL)
-				if err == nil {
-					// Construct base URL with scheme and host only
-					base := fmt.Sprintf("%s://%s", baseURL.Scheme, baseURL.Host)
-					
-					// If variant.URI starts with /, it's an absolute path
-					if strings.HasPrefix(variant.URI, "/") {
-						variantInfo.URI = base + variant.URI
-					} else {
-						// Relative path, append to base
-						variantInfo.URI = base + "/" + variant.URI
+				// Extract base URL from m3u8URL (protocol + host)
+				if strings.Contains(m3u8URL, "://") {
+					parts := strings.SplitN(m3u8URL, "/", 4) // ["https:", "", "jeniusplay.com", "path..."]
+					if len(parts) >= 3 {
+						baseURL := parts[0] + "//" + parts[1] + "/" + parts[2]
+						// Clean up variant URI (remove leading slash if exists)
+						cleanURI := strings.TrimPrefix(variant.URI, "/")
+						variantInfo.URI = baseURL + "/" + cleanURI
 					}
 				}
 			}

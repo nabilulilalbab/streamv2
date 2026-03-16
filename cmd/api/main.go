@@ -103,6 +103,7 @@ func startServer() {
 	// Create handlers
 	featuredHandler := handlers.NewFeaturedHandler(idlixService)
 	videoHandler := handlers.NewVideoHandler(idlixService)
+	proxyHandler := handlers.NewProxyHandler()
 	fmt.Println("✅ Handlers initialized")
 
 	// Setup router
@@ -127,6 +128,10 @@ func startServer() {
 		// Video info
 		v1.POST("/video/info", videoHandler.GetVideoInfo)
 
+		// Proxy endpoint for CORS bypass
+		v1.GET("/proxy", proxyHandler.ProxyM3U8)
+		v1.OPTIONS("/proxy", proxyHandler.HandleOptions)
+
 		// Health check
 		v1.GET("/health", healthCheck)
 	}
@@ -138,6 +143,8 @@ func startServer() {
 	fmt.Printf("   GET  http://localhost:%s/api/v1/health\n", config.Server.Port)
 	fmt.Printf("   GET  http://localhost:%s/api/v1/featured\n", config.Server.Port)
 	fmt.Printf("   POST http://localhost:%s/api/v1/video/info\n", config.Server.Port)
+	fmt.Printf("   GET  http://localhost:%s/api/v1/proxy?url=<target_url>\n", config.Server.Port)
+	fmt.Printf("   📄  http://localhost:%s/player (HLS Player)\n", config.Server.Port)
 	fmt.Println()
 
 	if err := router.Run(addr); err != nil {
