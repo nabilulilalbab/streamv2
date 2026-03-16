@@ -21,7 +21,17 @@ func NewVideoHandler(service *services.IDLIXService) *VideoHandler {
 	}
 }
 
-// GetVideoInfo handles POST /api/v1/video/info
+// GetVideoInfo godoc
+// @Summary      Get video information
+// @Description  Get complete video information including M3U8 streams, quality variants, and subtitles
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        request  body      models.VideoInfoRequest  true  "Video URL request"
+// @Success      200      {object}  models.APIResponse{data=models.VideoInfo}  "Video info retrieved successfully"
+// @Failure      400      {object}  models.APIResponse  "Invalid request body"
+// @Failure      500      {object}  models.APIResponse  "Internal server error"
+// @Router       /video/info [post]
 func (h *VideoHandler) GetVideoInfo(c *gin.Context) {
 	var req models.VideoInfoRequest
 

@@ -2,16 +2,16 @@ package models
 
 // APIResponse is the standard API response structure
 type APIResponse struct {
-	Status  bool        `json:"status"`
-	Message string      `json:"message"`
+	Status  bool        `json:"status" example:"true"`
+	Message string      `json:"message" example:"Success"`
 	Data    interface{} `json:"data,omitempty"`
 	Error   *ErrorInfo  `json:"error,omitempty"`
 }
 
 // ErrorInfo contains detailed error information
 type ErrorInfo struct {
-	Code    string `json:"code"`
-	Details string `json:"details"`
+	Code    string `json:"code" example:"ERROR_CODE"`
+	Details string `json:"details" example:"Detailed error message"`
 }
 
 // SuccessResponse creates a success response

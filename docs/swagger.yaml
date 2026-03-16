@@ -1,0 +1,214 @@
+basePath: /api/v1
+definitions:
+  idlix-api_internal_models.APIResponse:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/idlix-api_internal_models.ErrorInfo'
+      message:
+        example: Success
+        type: string
+      status:
+        example: true
+        type: boolean
+    type: object
+  idlix-api_internal_models.ErrorInfo:
+    properties:
+      code:
+        example: ERROR_CODE
+        type: string
+      details:
+        example: Detailed error message
+        type: string
+    type: object
+  idlix-api_internal_models.FeaturedMoviesResponse:
+    properties:
+      movies:
+        items:
+          $ref: '#/definitions/idlix-api_internal_models.Movie'
+        type: array
+    type: object
+  idlix-api_internal_models.Movie:
+    properties:
+      poster:
+        example: https://image.tmdb.org/t/p/w185/poster.jpg
+        type: string
+      title:
+        example: Example Movie (2024)
+        type: string
+      type:
+        example: movie
+        type: string
+      url:
+        example: https://tv12.idlixku.com/movie/example-2024/
+        type: string
+      year:
+        example: "2024"
+        type: string
+    type: object
+  idlix-api_internal_models.SubtitleInfo:
+    properties:
+      available:
+        example: true
+        type: boolean
+      format:
+        example: vtt
+        type: string
+      url:
+        example: https://jeniusplay.com/subs/subtitle.vtt
+        type: string
+    type: object
+  idlix-api_internal_models.VariantPlaylist:
+    properties:
+      bandwidth:
+        example: 1510000
+        type: integer
+      id:
+        example: "0"
+        type: string
+      resolution:
+        example: 1920x1080
+        type: string
+      uri:
+        example: https://jeniusplay.com/hls/hash123/1080p.m3u8
+        type: string
+    type: object
+  idlix-api_internal_models.VideoInfo:
+    properties:
+      embed_url:
+        example: https://jeniusplay.com/video/hash123
+        type: string
+      is_variant_playlist:
+        example: true
+        type: boolean
+      m3u8_url:
+        example: https://jeniusplay.com/cdn/hls/hash123/master.m3u8
+        type: string
+      poster:
+        example: https://image.tmdb.org/t/p/w185/poster.jpg
+        type: string
+      subtitle:
+        $ref: '#/definitions/idlix-api_internal_models.SubtitleInfo'
+      variants:
+        items:
+          $ref: '#/definitions/idlix-api_internal_models.VariantPlaylist'
+        type: array
+      video_id:
+        example: "163426"
+        type: string
+      video_name:
+        example: Crime 101 (2026)
+        type: string
+    type: object
+  idlix-api_internal_models.VideoInfoRequest:
+    properties:
+      url:
+        example: https://tv12.idlixku.com/movie/crime-101-2026/
+        type: string
+    required:
+    - url
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: nabilulilalbab@github.com
+    name: API Support
+    url: https://github.com/nabilulilalbab/streamv2/issues
+  description: RESTful API for IDLIX video streaming platform. Provides endpoints
+    for scraping movie data, M3U8 streams, and video variants.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://github.com/nabilulilalbab/streamv2
+  title: IDLIX API
+  version: 1.0.0
+paths:
+  /featured:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve list of featured movies from IDLIX homepage (excluding
+        TV series)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Featured movies retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/idlix-api_internal_models.FeaturedMoviesResponse'
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+      summary: Get featured movies
+      tags:
+      - movies
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Check if API is running and get version information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API is healthy
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - system
+  /video/info:
+    post:
+      consumes:
+      - application/json
+      description: Get complete video information including M3U8 streams, quality
+        variants, and subtitles
+      parameters:
+      - description: Video URL request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/idlix-api_internal_models.VideoInfoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Video info retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/idlix-api_internal_models.VideoInfo'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+      summary: Get video information
+      tags:
+      - videos
+schemes:
+- http
+- https
+swagger: "2.0"
+tags:
+- description: System health and status endpoints
+  name: system
+- description: Movie browsing and discovery endpoints
+  name: movies
+- description: Video information and streaming endpoints
+  name: videos

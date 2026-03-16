@@ -2,34 +2,34 @@ package models
 
 // VideoInfoRequest is the request body for video info endpoint
 type VideoInfoRequest struct {
-	URL string `json:"url" binding:"required"`
+	URL string `json:"url" binding:"required" example:"https://tv12.idlixku.com/movie/crime-101-2026/"`
 }
 
 // VideoInfo contains complete video information
 type VideoInfo struct {
-	VideoID           string              `json:"video_id"`
-	VideoName         string              `json:"video_name"`
-	Poster            string              `json:"poster"`
-	EmbedURL          string              `json:"embed_url"`
-	M3U8URL           string              `json:"m3u8_url"`
-	IsVariantPlaylist bool                `json:"is_variant_playlist"`
+	VideoID           string              `json:"video_id" example:"163426"`
+	VideoName         string              `json:"video_name" example:"Crime 101 (2026)"`
+	Poster            string              `json:"poster" example:"https://image.tmdb.org/t/p/w185/poster.jpg"`
+	EmbedURL          string              `json:"embed_url" example:"https://jeniusplay.com/video/hash123"`
+	M3U8URL           string              `json:"m3u8_url" example:"https://jeniusplay.com/cdn/hls/hash123/master.m3u8"`
+	IsVariantPlaylist bool                `json:"is_variant_playlist" example:"true"`
 	Variants          []VariantPlaylist   `json:"variants,omitempty"`
 	Subtitle          *SubtitleInfo       `json:"subtitle,omitempty"`
 }
 
 // VariantPlaylist represents a video quality variant
 type VariantPlaylist struct {
-	ID         string `json:"id"`
-	Resolution string `json:"resolution"`
-	Bandwidth  uint32 `json:"bandwidth"`
-	URI        string `json:"uri"`
+	ID         string `json:"id" example:"0"`
+	Resolution string `json:"resolution" example:"1920x1080"`
+	Bandwidth  uint32 `json:"bandwidth" example:"1510000"`
+	URI        string `json:"uri" example:"https://jeniusplay.com/hls/hash123/1080p.m3u8"`
 }
 
 // SubtitleInfo contains subtitle information
 type SubtitleInfo struct {
-	Available bool   `json:"available"`
-	URL       string `json:"url,omitempty"`
-	Format    string `json:"format,omitempty"`
+	Available bool   `json:"available" example:"true"`
+	URL       string `json:"url,omitempty" example:"https://jeniusplay.com/subs/subtitle.vtt"`
+	Format    string `json:"format,omitempty" example:"vtt"`
 }
 
 // DownloadRequest is the request body for download endpoint

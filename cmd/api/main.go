@@ -14,7 +14,38 @@ import (
 	"idlix-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
+	
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	
+	_ "idlix-api/docs" // Import generated docs
 )
+
+// @title           IDLIX API
+// @version         1.0.0
+// @description     RESTful API for IDLIX video streaming platform. Provides endpoints for scraping movie data, M3U8 streams, and video variants.
+// @termsOfService  https://github.com/nabilulilalbab/streamv2
+
+// @contact.name   API Support
+// @contact.url    https://github.com/nabilulilalbab/streamv2/issues
+// @contact.email  nabilulilalbab@github.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @schemes   http https
+
+// @tag.name system
+// @tag.description System health and status endpoints
+
+// @tag.name movies
+// @tag.description Movie browsing and discovery endpoints
+
+// @tag.name videos
+// @tag.description Video information and streaming endpoints
 
 func main() {
 	// For now, run the scraper test
@@ -80,6 +111,9 @@ func startServer() {
 	router.Use(middleware.CORSMiddleware())
 	router.Use(gin.Recovery())
 
+	// Swagger documentation route
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
@@ -90,13 +124,7 @@ func startServer() {
 		v1.POST("/video/info", videoHandler.GetVideoInfo)
 
 		// Health check
-		v1.GET("/health", func(c *gin.Context) {
-			c.JSON(200, gin.H{
-				"status":  "ok",
-				"version": "1.0.0",
-				"message": "IDLIX API is running",
-			})
-		})
+		v1.GET("/health", healthCheck)
 	}
 
 	// Start server
@@ -111,6 +139,22 @@ func startServer() {
 	if err := router.Run(addr); err != nil {
 		log.Fatalf("❌ Failed to start server: %v", err)
 	}
+}
+
+// healthCheck godoc
+// @Summary      Health check
+// @Description  Check if API is running and get version information
+// @Tags         system
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]string  "API is healthy"
+// @Router       /health [get]
+func healthCheck(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"status":  "ok",
+		"version": "1.0.0",
+		"message": "IDLIX API is running",
+	})
 }
 
 func getEnv(key, defaultValue string) string {
