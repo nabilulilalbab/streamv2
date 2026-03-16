@@ -111,6 +111,10 @@ func startServer() {
 	router.Use(middleware.CORSMiddleware())
 	router.Use(gin.Recovery())
 
+	// Static files (player page)
+	router.StaticFile("/player", "./static/player.html")
+	router.Static("/static", "./static")
+
 	// Swagger documentation route
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
