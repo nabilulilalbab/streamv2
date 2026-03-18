@@ -47,13 +47,10 @@ import (
 // @tag.name videos
 // @tag.description Video information and streaming endpoints
 
-func main() {
-	// For now, run the scraper test
-	if len(os.Args) > 1 && os.Args[1] == "test-scraper" {
-		testScraper()
-		return
-	}
+// @tag.name subtitle
+// @tag.description Subtitle download and search endpoints
 
+func main() {
 	// Start API server
 	startServer()
 }
@@ -104,6 +101,7 @@ func startServer() {
 	featuredHandler := handlers.NewFeaturedHandler(idlixService)
 	videoHandler := handlers.NewVideoHandler(idlixService)
 	proxyHandler := handlers.NewProxyHandler()
+	subtitleHandler := handlers.NewSubtitleHandler(idlixService, httpClient)
 	fmt.Println("✅ Handlers initialized")
 
 	// Setup router
@@ -132,6 +130,13 @@ func startServer() {
 		v1.GET("/proxy", proxyHandler.ProxyM3U8)
 		v1.OPTIONS("/proxy", proxyHandler.HandleOptions)
 
+		// Subtitle endpoints
+		subtitleGroup := v1.Group("/subtitle")
+		{
+			subtitleGroup.GET("/download", subtitleHandler.DownloadSubtitle)
+			subtitleGroup.GET("/search", subtitleHandler.SearchSubtitles)
+		}
+
 		// Health check
 		v1.GET("/health", healthCheck)
 	}
@@ -144,6 +149,8 @@ func startServer() {
 	fmt.Printf("   GET  http://localhost:%s/api/v1/featured\n", config.Server.Port)
 	fmt.Printf("   POST http://localhost:%s/api/v1/video/info\n", config.Server.Port)
 	fmt.Printf("   GET  http://localhost:%s/api/v1/proxy?url=<target_url>\n", config.Server.Port)
+	fmt.Printf("   GET  http://localhost:%s/api/v1/subtitle/download?url=<subtitle_url>\n", config.Server.Port)
+	fmt.Printf("   GET  http://localhost:%s/api/v1/subtitle/search?url=<video_url>\n", config.Server.Port)
 	fmt.Printf("   📄  http://localhost:%s/player (HLS Player)\n", config.Server.Port)
 	fmt.Println()
 

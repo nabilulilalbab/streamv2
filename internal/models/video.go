@@ -27,9 +27,32 @@ type VariantPlaylist struct {
 
 // SubtitleInfo contains subtitle information
 type SubtitleInfo struct {
-	Available bool   `json:"available" example:"true"`
-	URL       string `json:"url,omitempty" example:"https://jeniusplay.com/subs/subtitle.vtt"`
-	Format    string `json:"format,omitempty" example:"vtt"`
+	Available bool            `json:"available" example:"true"`
+	Tracks    []SubtitleTrack `json:"tracks,omitempty"`
+}
+
+// SubtitleTrack represents a single subtitle track with language
+type SubtitleTrack struct {
+	Language string `json:"language" example:"Bahasa"`
+	URL      string `json:"url" example:"https://g5.wiseacademia.asia/r/xyz.jpg"`
+	Format   string `json:"format" example:"srt"`
+}
+
+// SubtitleSearchResponse contains search results for subtitles
+type SubtitleSearchResponse struct {
+	VideoID   string              `json:"video_id" example:"163426"`
+	VideoName string              `json:"video_name" example:"Crime 101 (2026)"`
+	Subtitles []SubtitleTrackInfo `json:"subtitles"`
+	Total     int                 `json:"total" example:"2"`
+	Filtered  bool                `json:"filtered" example:"true"`
+}
+
+// SubtitleTrackInfo contains subtitle track info with download URL
+type SubtitleTrackInfo struct {
+	Language    string `json:"language" example:"Bahasa"`
+	URL         string `json:"url" example:"https://g5.wiseacademia.asia/r/xyz.jpg"`
+	Format      string `json:"format" example:"srt"`
+	DownloadURL string `json:"download_url" example:"/api/v1/subtitle/download?url=..."`
 }
 
 // DownloadRequest is the request body for download endpoint
@@ -72,7 +95,8 @@ type EncryptedData struct {
 
 // JeniusPlayVideoResponse represents response from JeniusPlay API
 type JeniusPlayVideoResponse struct {
-	VideoSource string `json:"videoSource"`
-	SecSrc      string `json:"secSrc,omitempty"`
-	Tracks      string `json:"tracks,omitempty"`
+	VideoSource  string `json:"videoSource"`
+	SecuredLink  string `json:"securedLink,omitempty"`  // Secured M3U8 URL with auth
+	SecSrc       string `json:"secSrc,omitempty"`
+	Tracks       string `json:"tracks,omitempty"`
 }

@@ -90,71 +90,137 @@ func (r *JeniusRepository) GetVideoSource(embedHash string) (*models.JeniusPlayV
 		return nil, fmt.Errorf("failed to parse video response: %w", err)
 	}
 
+	fmt.Printf("📦 [JENIUS_REPO] Parsed Response: %+v\n", videoResp)
+	fmt.Printf("📦 [JENIUS_REPO] VideoSource: %s\n", videoResp.VideoSource)
+	fmt.Printf("📦 [JENIUS_REPO] SecuredLink: %s\n", videoResp.SecuredLink)
+	
 	// Validate response
 	if videoResp.VideoSource == "" {
 		fmt.Printf("❌ [JENIUS_REPO] VideoSource is empty in response\n")
-		fmt.Printf("📥 [JENIUS_REPO] Parsed Response: %+v\n", videoResp)
 		return nil, fmt.Errorf("video source not found in response")
 	}
 
 	fmt.Printf("✅ [JENIUS_REPO] Successfully got VideoSource: %s\n", videoResp.VideoSource)
+	if videoResp.SecuredLink != "" {
+		fmt.Printf("✅ [JENIUS_REPO] SecuredLink available: %s\n", videoResp.SecuredLink)
+	}
 	return &videoResp, nil
 }
 
-// GetSubtitleURL extracts subtitle URL from JeniusPlay response
-func (r *JeniusRepository) GetSubtitleURL(embedHash string) (string, error) {
-	if embedHash == "" {
-		return "", fmt.Errorf("embed hash is required")
+// GetSubtitlesFromHTML extracts subtitle tracks from JeniusPlay embed page HTML
+func (r *JeniusRepository) GetSubtitlesFromHTML(embedURL string) ([]models.SubtitleTrack, error) {
+	fmt.Printf("\n📝 [JENIUS_REPO] GetSubtitlesFromHTML called with: %s\n", embedURL)
+	
+	if embedURL == "" {
+		return nil, fmt.Errorf("embed URL is required")
 	}
-
-	// Prepare form data
-	formData := url.Values{}
-	formData.Set("hash", embedHash)
-	formData.Set("r", "https://tv12.idlixku.com/")
 
 	// Request headers
 	headers := map[string]string{
-		"Host":         "jeniusplay.com",
-		"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+		"Host":    "jeniusplay.com",
+		"Referer": "https://tv12.idlixku.com/",
 	}
 
-	// POST request
-	resp, err := r.client.Post(
-		r.baseURL+"player/index.php?data="+embedHash+"&do=getVideo",
-		headers,
-		formData.Encode(),
-	)
+	// GET request to embed page
+	fmt.Printf("📤 [JENIUS_REPO] GET Request to: %s\n", embedURL)
+	resp, err := r.client.Get(embedURL, headers)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch subtitle: %w", err)
+		fmt.Printf("❌ [JENIUS_REPO] GET request failed: %v\n", err)
+		return nil, fmt.Errorf("failed to fetch embed page: %w", err)
 	}
 	defer resp.Body.Close()
+
+	fmt.Printf("📥 [JENIUS_REPO] Response Status Code: %d\n", resp.StatusCode)
+
+	// Check status
+	if resp.StatusCode != 200 {
+		fmt.Printf("❌ [JENIUS_REPO] Non-200 status code: %d\n", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
+		fmt.Printf("❌ [JENIUS_REPO] Failed to read response body: %v\n", err)
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// Extract subtitle using regex
+	htmlContent := string(body)
+	fmt.Printf("📥 [JENIUS_REPO] HTML Content Length: %d bytes\n", len(htmlContent))
+
+	// Extract playerjsSubtitle using regex
 	// Pattern: var playerjsSubtitle = "...";
-	re := regexp.MustCompile(`var playerjsSubtitle = "(.*)";`)
-	matches := re.FindStringSubmatch(string(body))
+	re := regexp.MustCompile(`var\s+playerjsSubtitle\s*=\s*"([^"]*)";`)
+	matches := re.FindStringSubmatch(htmlContent)
 
 	if len(matches) < 2 {
-		return "", fmt.Errorf("subtitle not found")
+		fmt.Printf("⚠️  [JENIUS_REPO] No playerjsSubtitle found in HTML\n")
+		return []models.SubtitleTrack{}, nil // Return empty array, not error
 	}
 
-	subtitleURL := matches[1]
+	subtitleValue := matches[1]
+	fmt.Printf("📝 [JENIUS_REPO] Found playerjsSubtitle: %d chars\n", len(subtitleValue))
+
+	// Parse subtitle format: [Label]URL[Label]URL...
+	tracks := r.parseSubtitleTracks(subtitleValue)
 	
-	// Extract https URL from the match
-	if strings.Contains(subtitleURL, "https://") {
-		parts := strings.Split(subtitleURL, "https://")
-		if len(parts) > 1 {
-			return "https://" + parts[1], nil
+	fmt.Printf("✅ [JENIUS_REPO] Extracted %d subtitle track(s)\n", len(tracks))
+	for i, track := range tracks {
+		fmt.Printf("   Track %d: Language=%s, Format=%s\n", i+1, track.Language, track.Format)
+	}
+
+	return tracks, nil
+}
+
+// parseSubtitleTracks parses subtitle tracks from format: [Label]URL[Label]URL...
+func (r *JeniusRepository) parseSubtitleTracks(subtitleValue string) []models.SubtitleTrack {
+	var tracks []models.SubtitleTrack
+
+	// Split by [ to get entries
+	entries := strings.Split(subtitleValue, "[")
+
+	for _, entry := range entries {
+		if entry == "" {
+			continue
+		}
+
+		// Find closing ]
+		closeBracket := strings.Index(entry, "]")
+		if closeBracket == -1 {
+			continue
+		}
+
+		label := entry[:closeBracket]
+		rest := entry[closeBracket+1:]
+
+		// Extract URL (until next [ or end)
+		url := rest
+		nextBracket := strings.Index(rest, "[")
+		if nextBracket != -1 {
+			url = rest[:nextBracket]
+		}
+
+		url = strings.TrimSpace(url)
+
+		// Validate URL
+		if url != "" && (strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
+			// Detect format from URL
+			format := "srt" // Default
+			if strings.HasSuffix(url, ".vtt") {
+				format = "vtt"
+			} else if strings.HasSuffix(url, ".srt") {
+				format = "srt"
+			}
+
+			tracks = append(tracks, models.SubtitleTrack{
+				Language: label,
+				URL:      url,
+				Format:   format,
+			})
 		}
 	}
 
-	return "", fmt.Errorf("invalid subtitle URL format")
+	return tracks
 }
 
 // ExtractEmbedHash extracts hash from embed URL

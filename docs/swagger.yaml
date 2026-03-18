@@ -1,10 +1,10 @@
 basePath: /api/v1
 definitions:
-  idlix-api_internal_models.APIResponse:
+  models.APIResponse:
     properties:
       data: {}
       error:
-        $ref: '#/definitions/idlix-api_internal_models.ErrorInfo'
+        $ref: '#/definitions/models.ErrorInfo'
       message:
         example: Success
         type: string
@@ -12,7 +12,7 @@ definitions:
         example: true
         type: boolean
     type: object
-  idlix-api_internal_models.ErrorInfo:
+  models.ErrorInfo:
     properties:
       code:
         example: ERROR_CODE
@@ -21,14 +21,14 @@ definitions:
         example: Detailed error message
         type: string
     type: object
-  idlix-api_internal_models.FeaturedMoviesResponse:
+  models.FeaturedMoviesResponse:
     properties:
       movies:
         items:
-          $ref: '#/definitions/idlix-api_internal_models.Movie'
+          $ref: '#/definitions/models.Movie'
         type: array
     type: object
-  idlix-api_internal_models.Movie:
+  models.Movie:
     properties:
       poster:
         example: https://image.tmdb.org/t/p/w185/poster.jpg
@@ -46,19 +46,63 @@ definitions:
         example: "2024"
         type: string
     type: object
-  idlix-api_internal_models.SubtitleInfo:
+  models.SubtitleInfo:
     properties:
       available:
         example: true
         type: boolean
-      format:
-        example: vtt
+      tracks:
+        items:
+          $ref: '#/definitions/models.SubtitleTrack'
+        type: array
+    type: object
+  models.SubtitleSearchResponse:
+    properties:
+      filtered:
+        example: true
+        type: boolean
+      subtitles:
+        items:
+          $ref: '#/definitions/models.SubtitleTrackInfo'
+        type: array
+      total:
+        example: 2
+        type: integer
+      video_id:
+        example: "163426"
         type: string
-      url:
-        example: https://jeniusplay.com/subs/subtitle.vtt
+      video_name:
+        example: Crime 101 (2026)
         type: string
     type: object
-  idlix-api_internal_models.VariantPlaylist:
+  models.SubtitleTrack:
+    properties:
+      format:
+        example: srt
+        type: string
+      language:
+        example: Bahasa
+        type: string
+      url:
+        example: https://g5.wiseacademia.asia/r/xyz.jpg
+        type: string
+    type: object
+  models.SubtitleTrackInfo:
+    properties:
+      download_url:
+        example: /api/v1/subtitle/download?url=...
+        type: string
+      format:
+        example: srt
+        type: string
+      language:
+        example: Bahasa
+        type: string
+      url:
+        example: https://g5.wiseacademia.asia/r/xyz.jpg
+        type: string
+    type: object
+  models.VariantPlaylist:
     properties:
       bandwidth:
         example: 1510000
@@ -73,7 +117,7 @@ definitions:
         example: https://jeniusplay.com/hls/hash123/1080p.m3u8
         type: string
     type: object
-  idlix-api_internal_models.VideoInfo:
+  models.VideoInfo:
     properties:
       embed_url:
         example: https://jeniusplay.com/video/hash123
@@ -88,10 +132,10 @@ definitions:
         example: https://image.tmdb.org/t/p/w185/poster.jpg
         type: string
       subtitle:
-        $ref: '#/definitions/idlix-api_internal_models.SubtitleInfo'
+        $ref: '#/definitions/models.SubtitleInfo'
       variants:
         items:
-          $ref: '#/definitions/idlix-api_internal_models.VariantPlaylist'
+          $ref: '#/definitions/models.VariantPlaylist'
         type: array
       video_id:
         example: "163426"
@@ -100,7 +144,7 @@ definitions:
         example: Crime 101 (2026)
         type: string
     type: object
-  idlix-api_internal_models.VideoInfoRequest:
+  models.VideoInfoRequest:
     properties:
       url:
         example: https://tv12.idlixku.com/movie/crime-101-2026/
@@ -136,15 +180,15 @@ paths:
           description: Featured movies retrieved successfully
           schema:
             allOf:
-            - $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+            - $ref: '#/definitions/models.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/idlix-api_internal_models.FeaturedMoviesResponse'
+                  $ref: '#/definitions/models.FeaturedMoviesResponse'
               type: object
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+            $ref: '#/definitions/models.APIResponse'
       summary: Get featured movies
       tags:
       - movies
@@ -165,6 +209,110 @@ paths:
       summary: Health check
       tags:
       - system
+  /proxy:
+    get:
+      description: Proxy streaming requests to bypass CORS restrictions
+      parameters:
+      - description: Target URL to proxy
+        in: query
+        name: url
+        required: true
+        type: string
+      produces:
+      - application/x-mpegURL
+      - video/MP2T
+      responses:
+        "200":
+          description: Stream content
+          schema:
+            type: string
+        "400":
+          description: Invalid URL
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Proxy error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Proxy M3U8/TS requests
+      tags:
+      - proxy
+  /subtitle/download:
+    get:
+      description: Download subtitle file with CORS support and optional format conversion
+      parameters:
+      - description: Subtitle URL
+        in: query
+        name: url
+        required: true
+        type: string
+      - description: Target format (srt or vtt)
+        in: query
+        name: format
+        type: string
+      - description: Custom filename
+        in: query
+        name: filename
+        type: string
+      produces:
+      - text/plain
+      - text/vtt
+      responses:
+        "200":
+          description: Subtitle file content
+          schema:
+            type: string
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Download or conversion error
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      summary: Download subtitle file
+      tags:
+      - subtitle
+  /subtitle/search:
+    get:
+      consumes:
+      - application/json
+      description: Get subtitle tracks for a video with optional language filter
+      parameters:
+      - description: Video URL
+        in: query
+        name: url
+        required: true
+        type: string
+      - description: Language filter (case-insensitive, partial match)
+        in: query
+        name: language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Subtitles found
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.SubtitleSearchResponse'
+              type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Failed to get subtitles
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      summary: Search subtitle tracks
+      tags:
+      - subtitle
   /video/info:
     post:
       consumes:
@@ -177,7 +325,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/idlix-api_internal_models.VideoInfoRequest'
+          $ref: '#/definitions/models.VideoInfoRequest'
       produces:
       - application/json
       responses:
@@ -185,19 +333,19 @@ paths:
           description: Video info retrieved successfully
           schema:
             allOf:
-            - $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+            - $ref: '#/definitions/models.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/idlix-api_internal_models.VideoInfo'
+                  $ref: '#/definitions/models.VideoInfo'
               type: object
         "400":
           description: Invalid request body
           schema:
-            $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+            $ref: '#/definitions/models.APIResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/idlix-api_internal_models.APIResponse'
+            $ref: '#/definitions/models.APIResponse'
       summary: Get video information
       tags:
       - videos
@@ -212,3 +360,5 @@ tags:
   name: movies
 - description: Video information and streaming endpoints
   name: videos
+- description: Subtitle download and search endpoints
+  name: subtitle

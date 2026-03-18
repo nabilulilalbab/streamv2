@@ -308,9 +308,10 @@
             });
         }
 
-        // Get proxy URL to bypass CORS
+        // Get proxy URL to bypass CORS via local Go proxy
         function getProxyURL(targetURL) {
             const encodedURL = encodeURIComponent(targetURL);
+            // Using local Go proxy
             return `/api/v1/proxy?url=${encodedURL}`;
         }
 

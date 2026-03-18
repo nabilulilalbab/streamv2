@@ -1,0 +1,26 @@
+# Wrangler Configuration for IDLIX Proxy Worker
+# This file is optional - you can deploy via dashboard or use wrangler CLI
+
+name = "idlix-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Account ID (get from Cloudflare dashboard)
+# account_id = "your-account-id-here"
+
+# Workers Dev subdomain
+# workers_dev = true
+
+# Custom domain (optional)
+# routes = [
+#   { pattern = "proxy.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+# Environment variables (optional)
+# [env.production]
+# vars = { ENVIRONMENT = "production" }
+
+# KV Namespaces (optional, for advanced caching)
+# kv_namespaces = [
+#   { binding = "CACHE", id = "your-kv-namespace-id" }
+# ]

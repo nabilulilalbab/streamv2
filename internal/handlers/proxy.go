@@ -24,9 +24,9 @@ func NewProxyHandler() *ProxyHandler {
 // @Produce      application/x-mpegURL
 // @Produce      video/MP2T
 // @Param        url  query  string  true  "Target URL to proxy"
-// @Success      200  "Stream content"
-// @Failure      400  {object}  models.APIResponse  "Invalid URL"
-// @Failure      500  {object}  models.APIResponse  "Proxy error"
+// @Success      200  {string}  string  "Stream content"
+// @Failure      400  {object}  map[string]interface{}  "Invalid URL"
+// @Failure      500  {object}  map[string]interface{}  "Proxy error"
 // @Router       /proxy [get]
 func (h *ProxyHandler) ProxyM3U8(c *gin.Context) {
 	// Get target URL from query parameter

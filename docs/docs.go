@@ -43,13 +43,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/idlix-api_internal_models.APIResponse"
+                                    "$ref": "#/definitions/models.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/idlix-api_internal_models.FeaturedMoviesResponse"
+                                            "$ref": "#/definitions/models.FeaturedMoviesResponse"
                                         }
                                     }
                                 }
@@ -59,7 +59,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/idlix-api_internal_models.APIResponse"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     }
                 }
@@ -91,6 +91,166 @@ const docTemplate = `{
                 }
             }
         },
+        "/proxy": {
+            "get": {
+                "description": "Proxy streaming requests to bypass CORS restrictions",
+                "produces": [
+                    "application/x-mpegURL",
+                    "video/MP2T"
+                ],
+                "tags": [
+                    "proxy"
+                ],
+                "summary": "Proxy M3U8/TS requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Target URL to proxy",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stream content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Proxy error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/subtitle/download": {
+            "get": {
+                "description": "Download subtitle file with CORS support and optional format conversion",
+                "produces": [
+                    "text/plain",
+                    "text/vtt"
+                ],
+                "tags": [
+                    "subtitle"
+                ],
+                "summary": "Download subtitle file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subtitle URL",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target format (srt or vtt)",
+                        "name": "format",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Custom filename",
+                        "name": "filename",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Subtitle file content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/models.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Download or conversion error",
+                        "schema": {
+                            "$ref": "#/definitions/models.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/subtitle/search": {
+            "get": {
+                "description": "Get subtitle tracks for a video with optional language filter",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subtitle"
+                ],
+                "summary": "Search subtitle tracks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video URL",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Language filter (case-insensitive, partial match)",
+                        "name": "language",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Subtitles found",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.SubtitleSearchResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/models.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to get subtitles",
+                        "schema": {
+                            "$ref": "#/definitions/models.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/video/info": {
             "post": {
                 "description": "Get complete video information including M3U8 streams, quality variants, and subtitles",
@@ -111,7 +271,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/idlix-api_internal_models.VideoInfoRequest"
+                            "$ref": "#/definitions/models.VideoInfoRequest"
                         }
                     }
                 ],
@@ -121,13 +281,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/idlix-api_internal_models.APIResponse"
+                                    "$ref": "#/definitions/models.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/idlix-api_internal_models.VideoInfo"
+                                            "$ref": "#/definitions/models.VideoInfo"
                                         }
                                     }
                                 }
@@ -137,13 +297,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/idlix-api_internal_models.APIResponse"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/idlix-api_internal_models.APIResponse"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     }
                 }
@@ -151,12 +311,12 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "idlix-api_internal_models.APIResponse": {
+        "models.APIResponse": {
             "type": "object",
             "properties": {
                 "data": {},
                 "error": {
-                    "$ref": "#/definitions/idlix-api_internal_models.ErrorInfo"
+                    "$ref": "#/definitions/models.ErrorInfo"
                 },
                 "message": {
                     "type": "string",
@@ -168,7 +328,7 @@ const docTemplate = `{
                 }
             }
         },
-        "idlix-api_internal_models.ErrorInfo": {
+        "models.ErrorInfo": {
             "type": "object",
             "properties": {
                 "code": {
@@ -181,18 +341,18 @@ const docTemplate = `{
                 }
             }
         },
-        "idlix-api_internal_models.FeaturedMoviesResponse": {
+        "models.FeaturedMoviesResponse": {
             "type": "object",
             "properties": {
                 "movies": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/idlix-api_internal_models.Movie"
+                        "$ref": "#/definitions/models.Movie"
                     }
                 }
             }
         },
-        "idlix-api_internal_models.Movie": {
+        "models.Movie": {
             "type": "object",
             "properties": {
                 "poster": {
@@ -217,24 +377,87 @@ const docTemplate = `{
                 }
             }
         },
-        "idlix-api_internal_models.SubtitleInfo": {
+        "models.SubtitleInfo": {
             "type": "object",
             "properties": {
                 "available": {
                     "type": "boolean",
                     "example": true
                 },
-                "format": {
-                    "type": "string",
-                    "example": "vtt"
-                },
-                "url": {
-                    "type": "string",
-                    "example": "https://jeniusplay.com/subs/subtitle.vtt"
+                "tracks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SubtitleTrack"
+                    }
                 }
             }
         },
-        "idlix-api_internal_models.VariantPlaylist": {
+        "models.SubtitleSearchResponse": {
+            "type": "object",
+            "properties": {
+                "filtered": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "subtitles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SubtitleTrackInfo"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "video_id": {
+                    "type": "string",
+                    "example": "163426"
+                },
+                "video_name": {
+                    "type": "string",
+                    "example": "Crime 101 (2026)"
+                }
+            }
+        },
+        "models.SubtitleTrack": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "example": "srt"
+                },
+                "language": {
+                    "type": "string",
+                    "example": "Bahasa"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://g5.wiseacademia.asia/r/xyz.jpg"
+                }
+            }
+        },
+        "models.SubtitleTrackInfo": {
+            "type": "object",
+            "properties": {
+                "download_url": {
+                    "type": "string",
+                    "example": "/api/v1/subtitle/download?url=..."
+                },
+                "format": {
+                    "type": "string",
+                    "example": "srt"
+                },
+                "language": {
+                    "type": "string",
+                    "example": "Bahasa"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://g5.wiseacademia.asia/r/xyz.jpg"
+                }
+            }
+        },
+        "models.VariantPlaylist": {
             "type": "object",
             "properties": {
                 "bandwidth": {
@@ -255,7 +478,7 @@ const docTemplate = `{
                 }
             }
         },
-        "idlix-api_internal_models.VideoInfo": {
+        "models.VideoInfo": {
             "type": "object",
             "properties": {
                 "embed_url": {
@@ -275,12 +498,12 @@ const docTemplate = `{
                     "example": "https://image.tmdb.org/t/p/w185/poster.jpg"
                 },
                 "subtitle": {
-                    "$ref": "#/definitions/idlix-api_internal_models.SubtitleInfo"
+                    "$ref": "#/definitions/models.SubtitleInfo"
                 },
                 "variants": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/idlix-api_internal_models.VariantPlaylist"
+                        "$ref": "#/definitions/models.VariantPlaylist"
                     }
                 },
                 "video_id": {
@@ -293,7 +516,7 @@ const docTemplate = `{
                 }
             }
         },
-        "idlix-api_internal_models.VideoInfoRequest": {
+        "models.VideoInfoRequest": {
             "type": "object",
             "required": [
                 "url"
@@ -318,6 +541,10 @@ const docTemplate = `{
         {
             "description": "Video information and streaming endpoints",
             "name": "videos"
+        },
+        {
+            "description": "Subtitle download and search endpoints",
+            "name": "subtitle"
         }
     ]
 }`

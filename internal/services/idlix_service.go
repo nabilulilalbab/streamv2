@@ -79,11 +79,22 @@ func (s *IDLIXService) GetVideoInfo(movieURL string) (*models.VideoInfo, error) 
 		return nil, fmt.Errorf("failed to get video source: %w", err)
 	}
 	fmt.Printf("✅ [SERVICE] Step 4 SUCCESS: VideoSource=%s\n", videoSource.VideoSource)
+	if videoSource.SecuredLink != "" {
+		fmt.Printf("📦 [SERVICE] SecuredLink available: %s\n", videoSource.SecuredLink)
+	}
 
-	// Step 5: Convert MP4 URL to M3U8
-	fmt.Println("📍 [SERVICE] Step 5: Converting MP4 URL to M3U8...")
-	m3u8URL := utils.ConvertMP4ToM3U8(videoSource.VideoSource)
-	fmt.Printf("✅ [SERVICE] Step 5 SUCCESS: M3U8URL=%s\n", m3u8URL)
+	// Step 5: Use securedLink if available, otherwise convert videoSource
+	fmt.Println("📍 [SERVICE] Step 5: Choosing M3U8 URL...")
+	var m3u8URL string
+	if videoSource.SecuredLink != "" {
+		// Use securedLink (already .m3u8 with authentication)
+		m3u8URL = videoSource.SecuredLink
+		fmt.Printf("✅ [SERVICE] Step 5 SUCCESS: Using securedLink (with auth): %s\n", m3u8URL)
+	} else {
+		// Fallback: Convert videoSource from .txt to .m3u8
+		m3u8URL = utils.ConvertMP4ToM3U8(videoSource.VideoSource)
+		fmt.Printf("⚠️  [SERVICE] Step 5 SUCCESS: Using videoSource (no auth): %s\n", m3u8URL)
+	}
 
 	// Step 6: Parse M3U8 playlist and get variants
 	fmt.Println("📍 [SERVICE] Step 6: Parsing M3U8 playlist...")
@@ -94,22 +105,29 @@ func (s *IDLIXService) GetVideoInfo(movieURL string) (*models.VideoInfo, error) 
 	}
 	fmt.Printf("✅ [SERVICE] Step 6 SUCCESS: IsVariant=%v, Variants=%d\n", isVariant, len(variants))
 
-	// Step 7: Get subtitle URL (optional, don't fail if not found)
-	fmt.Println("📍 [SERVICE] Step 7: Getting subtitle URL (optional)...")
+	// Step 7: Get subtitles from embed page (optional, don't fail if not found)
+	fmt.Println("📍 [SERVICE] Step 7: Getting subtitles from embed page (optional)...")
 	var subtitle *models.SubtitleInfo
-	subtitleURL, err := s.jeniusRepo.GetSubtitleURL(embedHash)
-	if err == nil && subtitleURL != "" {
+	tracks, err := s.jeniusRepo.GetSubtitlesFromHTML(embedURL)
+	if err == nil && len(tracks) > 0 {
 		subtitle = &models.SubtitleInfo{
 			Available: true,
-			URL:       subtitleURL,
-			Format:    "vtt",
+			Tracks:    tracks,
 		}
-		fmt.Printf("✅ [SERVICE] Step 7 SUCCESS: SubtitleURL=%s\n", subtitleURL)
+		fmt.Printf("✅ [SERVICE] Step 7 SUCCESS: Found %d subtitle track(s)\n", len(tracks))
+		for i, track := range tracks {
+			fmt.Printf("   Track %d: %s (%s)\n", i+1, track.Language, track.Format)
+		}
 	} else {
 		subtitle = &models.SubtitleInfo{
 			Available: false,
+			Tracks:    []models.SubtitleTrack{},
 		}
-		fmt.Printf("⚠️  [SERVICE] Step 7: No subtitle available (error: %v)\n", err)
+		if err != nil {
+			fmt.Printf("⚠️  [SERVICE] Step 7: Failed to get subtitles (error: %v)\n", err)
+		} else {
+			fmt.Printf("⚠️  [SERVICE] Step 7: No subtitles found\n")
+		}
 	}
 
 	fmt.Println("🎉 [SERVICE] GetVideoInfo completed successfully!")
